@@ -1,6 +1,7 @@
-import { Controller, Get, Res } from '@nestjs/common';
+import { Controller, Get, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { HealthService } from './health.service';
+import { HealthQueryDto } from './dto/health-query.dto';
 
 @Controller({ path: 'health', version: '1' })
 export class HealthController {
@@ -48,5 +49,10 @@ export class HealthController {
             return res.status(503).json(health);
         }
         return res.status(200).json(health);
+    }
+
+    @Get('checks')
+    getHealthChecks(@Query() query: HealthQueryDto) {
+        return this.healthService.getHealthChecks(query.page, query.limit);
     }
 }

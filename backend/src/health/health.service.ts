@@ -21,7 +21,7 @@ export class HealthService {
       await this.dataSource.query('SELECT 1');
       return { status: 'up' };
     } catch (error) {
-      return { status: 'down', error: error.message };
+      return { status: 'down', error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -37,5 +37,19 @@ export class HealthService {
 
   async checkSorobanContract(): Promise<SorobanHealthStatus> {
     return this.sorobanRpcService.checkKnownContract();
+  }
+
+  private readonly HEALTH_CHECKS = [
+    { name: 'app', endpoint: '/health' },
+    { name: 'db', endpoint: '/health/db' },
+    { name: 'redis', endpoint: '/health/redis' },
+    { name: 'soroban', endpoint: '/health/soroban' },
+    { name: 'soroban-contract', endpoint: '/health/soroban-contract' },
+  ];
+
+  getHealthChecks(page = 1, limit = 20) {
+    const start = (page - 1) * limit;
+    const data = this.HEALTH_CHECKS.slice(start, start + limit);
+    return { data, total: this.HEALTH_CHECKS.length, page, limit };
   }
 }

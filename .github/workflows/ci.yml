@@ -83,9 +83,19 @@ jobs:
         run: npm ci
         working-directory: frontend
 
+      - name: Check demo routes are gated (#1596)
+        run: npm run check:demo-routes
+        working-directory: frontend
+
       - name: Build
         run: npm run build
         working-directory: frontend
+
+      - name: Assert production build 404s demo routes (#1596)
+        run: node scripts/assert-demo-routes-404.mjs
+        working-directory: frontend
+        env:
+          NODE_ENV: production
 
   contract:
     name: Contract

@@ -44,6 +44,16 @@ vi.mock('@/lib/api/content', () => ({
   getContentById: vi.fn(),
 }));
 
+vi.mock('next/navigation', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('next/navigation')>();
+  return { ...actual, useRouter: () => ({ push: vi.fn() }) };
+});
+
+const mockViewerStatus = vi.fn();
+vi.mock('@/hooks/useViewerSubscriptionStatus', () => ({
+  useViewerSubscriptionStatus: () => mockViewerStatus(),
+}));
+
 import { getContentById } from '@/lib/api/content';
 
 const baseContent: ContentMetadata = {
@@ -81,6 +91,8 @@ describe('content/[id] unlock flow', () => {
   beforeEach(() => {
     window.localStorage.clear();
     vi.mocked(getContentById).mockReset();
+    mockViewerStatus.mockReset();
+    mockViewerStatus.mockReturnValue({ status: null, isLoading: false, error: null });
   });
 
   afterEach(() => {
@@ -89,18 +101,13 @@ describe('content/[id] unlock flow', () => {
 
   it('shows the locked overlay for gated content without an active subscription', async () => {
     vi.mocked(getContentById).mockResolvedValue({ ...baseContent, isGated: true });
+    mockViewerStatus.mockReturnValue({ status: null, isLoading: false, error: null });
 
-    vi.useFakeTimers();
     await act(async () => {
       renderContentPage();
     });
 
-    // ClientContent's onCheckAccess resolves after a simulated 1.5s network round trip.
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2000);
-    });
-
-    expect(screen.getByText('Exclusive Content')).toBeInTheDocument();
+    expect(await screen.findByText('Exclusive Content')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: `Subscribe to ${baseContent.creator.name}` }),
     ).toBeInTheDocument();
@@ -120,22 +127,16 @@ describe('content/[id] unlock flow', () => {
   });
 
   it('renders the full player once a gated content check resolves to an active subscription', async () => {
-    window.localStorage.setItem(
-      'myfans.viewer.subscriptions.v1',
-      JSON.stringify({ [baseContent.creator.id]: 'active' }),
-    );
+    mockViewerStatus.mockReturnValue({ status: 'active', isLoading: false, error: null });
     vi.mocked(getContentById).mockResolvedValue({ ...baseContent, isGated: true });
 
-    vi.useFakeTimers();
     await act(async () => {
       renderContentPage();
     });
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2000);
+    await waitFor(() => {
+      expect(screen.queryByText('Exclusive Content')).not.toBeInTheDocument();
     });
-
-    expect(screen.queryByText('Exclusive Content')).not.toBeInTheDocument();
     expect(
       screen.getAllByRole('status', { name: 'Subscription status: active' }).length,
     ).toBeGreaterThan(0);

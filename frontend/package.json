@@ -8,6 +8,7 @@
     "analyze": "ANALYZE=true next build",
     "start": "next start",
     "lint": "eslint",
+    "check:demo-routes": "node scripts/check-demo-routes-gated.mjs",
     "test:e2e": "playwright test",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",

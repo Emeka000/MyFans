@@ -4,10 +4,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SubscriptionsPage from './page';
 
-// Minimal mocks for dependencies
-vi.mock('@/lib/subscriptions', () => ({
-  MOCK_HISTORY: [],
-  MOCK_PAYMENTS: [],
+// `@/lib/subscriptions` is now types-only (no mock exports) — nothing to stub.
+
+vi.mock('@/components/NetworkMismatchBanner', () => ({
+  default: () => null,
 }));
 
 vi.mock('@/lib/formatting', () => ({
@@ -35,6 +35,8 @@ vi.mock('@/lib/error-copy', () => ({
 
 vi.mock('@/lib/stellar', () => ({
   cancelSubscriptionOnSoroban: vi.fn(),
+  extendSubscriptionOnSoroban: vi.fn(),
+  getStellarConfig: () => ({ network: 'testnet', contractIds: { token: 'TOKEN' } }),
 }));
 
 vi.mock('@/contexts/ToastContext', () => ({

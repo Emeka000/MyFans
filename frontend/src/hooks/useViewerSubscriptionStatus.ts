@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import type { SubscriptionStatus } from '@/lib/subscription-status';
-import { getSubscriptionStatusForCreator } from '@/lib/client-session';
 import { useWallet } from '@/hooks/useWallet';
 
 export interface UseViewerSubscriptionStatusResult {
@@ -12,38 +11,48 @@ export interface UseViewerSubscriptionStatusResult {
 }
 
 /**
- * Custom hook to fetch the live subscription status of the current viewer for a creator.
- * - Degrades to `null` (not-subscribed / visitor view) when logged out or no wallet present.
- * - Fetches live API status when wallet/session is present.
+ * Live subscription status of the current viewer for a creator.
+ *
+ * - Logged out / no wallet → `null` (visitor view, gated content stays locked).
+ * - Wallet present → asks the backend (`/subscriptions/me/subscription-state`,
+ *   which resolves against the index / chain), falling back to the
+ *   `me/list` endpoint.
+ *
+ * There is no local "is this user subscribed" cache: a stale client guess
+ * would flash the wrong unlock state. Until the API answers we report
+ * `isLoading` so callers can show a skeleton and keep content locked.
+ * (MyFanss/MyFans#1591)
  */
 export function useViewerSubscriptionStatus(
   creatorUsernameOrId?: string | null,
 ): UseViewerSubscriptionStatusResult {
   const { isConnected, address } = useWallet();
-  const [status, setStatus] = useState<SubscriptionStatus | null>(() => {
-    if (!creatorUsernameOrId) return null;
-    return getSubscriptionStatusForCreator(creatorUsernameOrId);
-  });
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const shouldFetch = Boolean(creatorUsernameOrId) && (isConnected || Boolean(address));
+
+  const [status, setStatus] = useState<SubscriptionStatus | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(shouldFetch);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     if (!creatorUsernameOrId) {
       setStatus(null);
       setIsLoading(false);
+      setError(null);
       return;
     }
 
-    // Logged out / no wallet -> degrade to neutral visitor state (null)
+    // Logged out / no wallet -> neutral visitor state (locked).
     if (!isConnected && !address) {
       setStatus(null);
       setIsLoading(false);
+      setError(null);
       return;
     }
 
     let mounted = true;
     const fetchStatus = async () => {
       setIsLoading(true);
+      setError(null);
       try {
         const params = new URLSearchParams({ creator: creatorUsernameOrId });
         const res = await fetch(`/api/v1/subscriptions/me/subscription-state?${params.toString()}`);
@@ -83,8 +92,8 @@ export function useViewerSubscriptionStatus(
       } catch (err) {
         if (mounted) {
           setError(err instanceof Error ? err : new Error(String(err)));
-          const cached = getSubscriptionStatusForCreator(creatorUsernameOrId);
-          setStatus(cached);
+          // Fail closed: if we can't confirm a subscription, treat as locked.
+          setStatus(null);
         }
       } finally {
         if (mounted) setIsLoading(false);

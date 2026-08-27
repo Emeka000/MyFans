@@ -10,6 +10,7 @@ import {
 import { fetchActiveSubscriptions, SubscriptionsUnauthorizedError } from '@/lib/api/subscriptions';
 import { formatCurrency, formatDate, getCurrencySymbol } from '@/lib/formatting';
 import { BaseCard } from '@/components/cards/BaseCard';
+import NetworkMismatchBanner from '@/components/NetworkMismatchBanner';
 import { Modal } from '@/components/Modal';
 import HistoryCardSkeleton from '@/components/ui/HistoryCardSkeleton';
 import ActiveSubscriptionSkeleton from '@/components/ui/ActiveSubscriptionSkeleton';
@@ -284,6 +285,9 @@ export default function SubscriptionsPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-10">
+        {/* Blocks cancel/renew on-chain calls while the wallet is on the wrong network */}
+        <NetworkMismatchBanner />
+
         {/* Active subscriptions */}
         <section aria-labelledby="active-heading">
           <h2 id="active-heading" className="text-lg font-semibold text-gray-900 dark:text-white mb-4">

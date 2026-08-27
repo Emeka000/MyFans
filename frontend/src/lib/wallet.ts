@@ -1,5 +1,6 @@
 import { createAppError, type AppError } from '@/types/errors';
 import { FeatureFlag, isFeatureEnabled } from '@/lib/feature-flags';
+import { assertWalletNetworkMatch } from '@/lib/network-guard';
 import { getWalletSession } from '@/lib/client-session';
 import type { WalletType } from '@/types/wallet';
 import {
@@ -225,6 +226,10 @@ export async function signTransaction(
     typeof options === 'string' ? { walletType: options } : options;
   const walletType = resolveSigningWalletType(opts.walletType);
   const signOpts = { network: opts.network, networkPassphrase: opts.networkPassphrase };
+
+  // Central guard: refuse to sign anything while the wallet is on the wrong
+  // network. Throws NETWORK_MISMATCH before any wallet prompt happens.
+  await assertWalletNetworkMatch();
 
   try {
     let signedXdr: string;

@@ -19,6 +19,7 @@ import {
 import { createCreatorPlanOnSoroban } from '@/lib/stellar';
 import { createAppError } from '@/types/errors';
 import { DashboardSectionBoundary } from '@/components/dashboard';
+import NetworkMismatchBanner from '@/components/NetworkMismatchBanner';
 import { createPlan, getCreatorPlans, generatePlanIdempotencyKey, type CreatePlanRequest } from '@/lib/api/plans';
 
 interface CreatorDashboardPlan {
@@ -338,6 +339,9 @@ export default function PlansPage() {
           Create token-priced plans for your fans, sign them with your creator wallet, and keep the dashboard in sync with pending and confirmed Soroban state.
         </p>
       </div>
+
+      {/* Blocks plan-creation signing/submission while the wallet is on the wrong network */}
+      <NetworkMismatchBanner />
 
       <DashboardSectionBoundary label="Wallet status">
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
